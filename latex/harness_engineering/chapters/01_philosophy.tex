@@ -1,0 +1,31 @@
+\chapter{The Foundations of Harness Engineering}
+
+\section{The Core Philosophy}
+The fundamental principle of modern AI development is encapsulated in the following equation:
+\begin{center}
+    \textbf{Agent = Model + Harness}
+\end{center}
+
+An LLM alone is just a stateless text-prediction engine. \textit{Harness Engineering} is the discipline of building the surrounding software infrastructure (the ``harness'') that gives the model memory, tools, boundaries, and autonomy. Instead of relying on ``prompt engineering'' to fix failures, a Harness Engineer builds system-level solutions to prevent them entirely.
+
+\section{The 5 Pillars of an Agent Harness}
+
+A production-grade agent is built upon five essential pillars that provide the necessary infrastructure for reliable and autonomous operation.
+
+\begin{enumerate}
+    \item \textbf{Context Management (The Brain's Workspace):} This pillar involves the dynamic assembly of prompts, history compaction, and memory management. Its primary goal is to provide the model with the most relevant information while ensuring the context window does not overflow.
+    
+    \item \textbf{Cognitive Framework:} This defines the agent's worldview, mission, and behavioral boundaries. Often codified in files like \texttt{agents.md}, it serves as a map for the agent, directing it on how to find information and how to behave, rather than being a static encyclopedia of knowledge.
+    
+    \item \textbf{Agent-Computer Interface (ACI):} Much like a User Interface (UI) is designed for humans, the ACI is designed for agents. It focuses on structured JSON-in/JSON-out tool design. The ACI follows a clear hierarchy:
+    \begin{itemize}
+        \item \textbf{Context/Maps:} Data dictionaries, documentation, and SOPs.
+        \item \textbf{Observation:} Read-only access to time-series, relational databases, or logs.
+        \item \textbf{Compute:} Sandboxed execution environments (e.g., Python kernels, WASM) for data processing.
+        \item \textbf{Action:} Systems of record and communication (e.g., Jira, Slack, API mutations).
+    \end{itemize}
+    
+    \item \textbf{Standard Workflows \& Refinement Loops:} This pillar enforces structured workflows such as the \textit{Plan-Generate-Evaluate} cycle. It enables the agent to self-correct based on actionable error feedback, such as feeding a Python stack trace back to the LLM when a tool call fails.
+    
+    \item \textbf{Evaluation \& Guardrails:} This involves implementing deterministic checks (e.g., linters, static analysis) and using LLM-as-a-judge patterns to verify outputs and behaviors before an agent is permitted to take final actions in a production environment.
+\end{enumerate}

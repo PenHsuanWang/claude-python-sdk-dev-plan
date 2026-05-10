@@ -1,0 +1,99 @@
+\chapter{Phase 4: Production and Safety (The Harness Phase)}
+
+The final phase of becoming a Harness Engineer involves deploying agents safely and measuring their performance. We implement the complete safety harness: sandboxed computation, automated evaluation, and human approval gates.
+
+\section{Step 10: Sandboxed Code Execution}
+Executing agent-generated code requires an isolated environment. Anthropic's \texttt{code\_execution} tool provides a secure, server-side container with popular data science libraries pre-installed.
+
+\begin{lstlisting}[caption={step10\_sandboxed\_agent.py}, label={lst:step10}]
+"""
+PHASE 4 - STEP 10: Sandboxed Code Execution
+Harness Pillar: ACI (Compute Layer)
+Goal: Securely execute agent-generated Python code.
+"""
+
+import anthropic
+
+def run_sandboxed_agent(task: str):
+    response = client.beta.messages.create(
+        model="claude-opus-4-5-20251101",
+        max_tokens=4096,
+        betas=["code-execution-2025-08-25"],
+        tools=[{"type": "code_execution_20250825"}],
+        system="You are a data analyst. Write and execute Python code.",
+        messages=[{"role": "user", "content": task}],
+    )
+    return response.content[0].text
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item Use isolated containers with no network access for agent code execution to prevent data exfiltration.
+    \item Anthropic's sandbox comes with pre-installed data science tools like \texttt{pandas} and \texttt{matplotlib}.
+    \item If running your own sandbox (e.g., Docker), always use \texttt{--network none} and \texttt{--read-only} flags.
+\end{itemize}
+
+\section{Step 11: Evaluation Suite}
+Automated evaluation is critical for measuring agent performance. We use the ``LLM-as-judge'' pattern to grade agent outputs against a test dataset of tasks and requirements.
+
+\begin{lstlisting}[caption={step11\_evaluation\_suite.py}, label={lst:step11}]
+"""
+PHASE 4 - STEP 11: LLM-as-Judge Evaluation Suite
+Harness Pillar: Evaluation & Guardrails
+Goal: Build a pipeline that tests your agent and grades results.
+"""
+
+from pydantic import BaseModel
+from typing import Literal
+
+class EvalResult(BaseModel):
+    verdict: Literal["pass", "fail"]
+    score: float
+    reasoning: str
+
+def llm_judge(task: str, output: str, requirements: list) -> EvalResult:
+    response = client.messages.parse(
+        model="claude-opus-4-5-20251101",
+        output_format=EvalResult,
+        system="You are a strict technical evaluator.",
+        messages=[{"role": "user", "content": f"Task: {task}\nOutput: {output}\nReqs: {requirements}"}],
+    )
+    return response.content[0].parsed
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item The evaluator model should be separate from the agent model to maintain objectivity.
+    \item Use structured outputs (Pydantic) for the judge to ensure deterministic verdicts and parseable scores.
+    \item Run evaluation suites in CI/CD before deploying any agent updates.
+\end{itemize}
+
+\section{Step 12: Human-in-the-Loop (HITL)}
+For high-stakes actions like sending emails or mutating databases, a human approval gate is mandatory. The harness pauses execution and waits for a human decision (Approve, Reject, or Modify).
+
+\begin{lstlisting}[caption={step12\_hitl\_agent.py}, label={lst:step12}]
+"""
+PHASE 4 - STEP 12: Human-in-the-Loop (HITL) Approval Gate
+Harness Pillar: Evaluation & Guardrails
+Goal: Pause the agent on high-stakes actions.
+"""
+
+HIGH_STAKES_TOOLS = {"send_email", "write_database"}
+
+def run_hitl_agent(task: str):
+    messages = [{"role": "user", "content": task}]
+    # ... ReAct Loop ...
+    if tool_name in HIGH_STAKES_TOOLS:
+        print(f"[APPROVAL REQUIRED]: {tool_name}")
+        decision = "approve" # Simulate human input
+        if decision == "reject":
+            # Return error to model
+            pass
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item Maintain an explicit allowlist of tools that require a permission bridge.
+    \item The approval gate pauses the agentic loop rather than canceling it, allowing the human to course-correct the input.
+    \item Real-world implementations often use Slack buttons, email approval links, or specialized web modals.
+\end{itemize}

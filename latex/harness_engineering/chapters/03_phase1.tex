@@ -1,0 +1,196 @@
+\chapter{Phase 1: Foundations (The Stateless Phase)}
+
+In this phase, we focus on understanding how to control Large Language Model (LLM) outputs deterministically. This is the bedrock of Harness Engineering: moving away from ``prompt and pray'' towards rigorous software control.
+
+\section{Step 1: API Mastery}
+The goal of this step is to understand core LLM APIs and parameters. A Harness Engineer must own the model's behavior through deterministic settings.
+
+\begin{lstlisting}[caption={step1\_api\_mastery.py}, label={lst:step1}]
+"""
+PHASE 1 - STEP 1: API Mastery
+Harness Pillar: Cognitive Framework
+Goal: Understand how to deterministically control Claude's output using API parameters.
+"""
+
+import anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
+client = anthropic.Anthropic()
+
+# 1a. Basic call - observe the raw structure
+response = client.messages.create(
+    model="claude-opus-4-5-20251101",
+    max_tokens=256,
+    messages=[{"role": "user", "content": "What is 17 x 24?"}],
+)
+print(f"Answer: {response.content[0].text}")
+
+# 1b. Temperature = 0 (deterministic output)
+for _ in range(3):
+    r = client.messages.create(
+        model="claude-opus-4-5-20251101",
+        max_tokens=64,
+        temperature=0,
+        messages=[{"role": "user", "content": "Give me one word for 'happy'."}],
+    )
+    print(r.content[0].text.strip())
+
+# 1c. Stop sequences - force early termination
+r = client.messages.create(
+    model="claude-opus-4-5-20251101",
+    max_tokens=256,
+    stop_sequences=["STOP"],
+    messages=[{"role": "user", "content": "Count from 1 to 10. After each number write 'STOP' on a new line."}],
+)
+print(r.content[0].text)
+
+# 1d. System prompt - define the Cognitive Framework
+SYSTEM = """You are a financial data analyst assistant.
+Rules:
+1. ONLY answer questions about financial data.
+2. ALWAYS cite your reasoning step-by-step.
+3. Format all monetary values as: $X,XXX.XX
+"""
+r = client.messages.create(
+    model="claude-opus-4-5-20251101",
+    max_tokens=256,
+    system=SYSTEM,
+    messages=[{"role": "user", "content": "What's the PE ratio of Apple?"}],
+)
+print(r.content[0].text)
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item Always set \texttt{temperature=0} for deterministic agent actions.
+    \item Use \texttt{stop\_sequences} to force the model to produce parseable output.
+    \item The system prompt IS your agent's Cognitive Framework---define its identity and boundaries here.
+\end{itemize}
+
+\section{Step 2: Structured Outputs}
+Harness Engineers never parse free text with regular expressions if they can avoid it. Instead, they contract the model to emit machine-readable structured data using schemas like Pydantic.
+
+\begin{lstlisting}[caption={step2\_structured\_outputs.py}, label={lst:step2}]
+"""
+PHASE 1 - STEP 2: Structured Outputs
+Harness Pillar: ACI (Agent-Computer Interface)
+Goal: Force Claude to reply in strictly validated JSON schemas using Pydantic.
+"""
+
+from typing import Literal
+import anthropic
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+load_dotenv()
+client = anthropic.Anthropic()
+
+class Company(BaseModel):
+    name: str
+    founded_year: int
+    headquarters: str
+    main_product: str
+
+response = client.messages.parse(
+    model="claude-opus-4-5-20251101",
+    max_tokens=256,
+    output_format=Company,
+    messages=[{"role": "user", "content": "Tell me about Anthropic, the AI safety company."}],
+)
+
+company: Company = response.content[0].parsed
+print(f"Name: {company.name}, Founded: {company.founded_year}")
+
+# Decision schema - agent decision-making
+class AgentDecision(BaseModel):
+    action: Literal["approve", "reject", "escalate"]
+    reason: str
+    confidence: float = Field(ge=0.0, le=1.0)
+
+SCENARIO = "User wants to withdraw $50,000. Balance is $52,000. Account is 2 years old."
+
+response = client.messages.parse(
+    model="claude-opus-4-5-20251101",
+    max_tokens=256,
+    system="You are a bank fraud detection agent.",
+    output_format=AgentDecision,
+    messages=[{"role": "user", "content": f"Evaluate: {SCENARIO}"}],
+)
+
+decision: AgentDecision = response.content[0].parsed
+print(f"Action: {decision.action}, Confidence: {decision.confidence:.0%}")
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item \texttt{client.messages.parse()} is the cleanest pattern for structured outputs.
+    \item Use \texttt{Literal} for constrained choices (enums).
+    \item Structured outputs are the foundation of reliable agentic pipelines.
+\end{itemize}
+
+\section{Step 3: The ReAct Loop}
+The ReAct (Reason + Act) loop is the heart of every AI agent. It is a cycle where the model thinks, acts (calls a tool), observes the result, and repeats until the task is complete.
+
+\begin{lstlisting}[caption={step3\_react\_loop.py}, label={lst:step3}]
+"""
+PHASE 1 - STEP 3: The ReAct Loop (Reason + Act)
+Harness Pillar: Standard Workflows & Refinement Loops
+Goal: Build the core agentic loop from scratch without frameworks.
+"""
+
+import math
+import json
+import anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
+client = anthropic.Anthropic()
+
+# Tool definition (The ACI)
+TOOLS = [{
+    "name": "calculator",
+    "description": "Perform mathematical calculations.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "expression": {"type": "string", "description": "Python math expression"}
+        },
+        "required": ["expression"]
+    }
+}]
+
+def run_agent(user_query: str) -> str:
+    messages = [{"role": "user", "content": user_query}]
+    while True:
+        response = client.messages.create(
+            model="claude-opus-4-5-20251101",
+            max_tokens=1024,
+            tools=TOOLS,
+            messages=messages,
+        )
+        messages.append({"role": "assistant", "content": response.content})
+
+        if response.stop_reason == "end_turn":
+            return response.content[-1].text
+
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    # Execute tool (omitted for brevity)
+                    result = "4" 
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+            messages.append({"role": "user", "content": tool_results})
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item The ReAct loop is a \texttt{while} loop keyed on \texttt{stop\_reason}.
+    \item Always append the assistant's full content to the message history to give it ``memory.''
+    \item Always cap iterations to prevent runaway loops.
+\end{itemize}

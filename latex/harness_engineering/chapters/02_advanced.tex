@@ -1,0 +1,31 @@
+\chapter{Guidebook for Further AI Agent Study}
+
+To deepen your expertise in Harness Engineering, focus on these advanced topics, which represent the current frontier of agentic systems.
+
+\section{Advanced Memory Architectures}
+Modern agents require long-term memory that spans multiple sessions without exhausting the context window.
+\begin{itemize}
+    \item \textbf{Topics:} Vector Databases (Pinecone, Milvus), Graph RAG (Knowledge Graphs), Episodic vs. Semantic Memory.
+    \item \textbf{Key Concept:} Treating the context window like RAM and vector databases like a hard drive. Study architectures like \textbf{MemGPT}, which autonomously manages its own memory by moving data between these layers.
+\end{itemize}
+
+\section{Multi-Agent Orchestration}
+Complex tasks are often handled better by a team of specialized agents rather than a single massive prompt.
+\begin{itemize}
+    \item \textbf{Topics:} Supervisor models, specialized sub-agents, routing, and consensus algorithms.
+    \item \textbf{Key Concept:} Learn to build workflows where a ``Planner Agent'' delegates to a ``Coder Agent,'' whose output is then verified by a ``QA Agent.'' Frameworks like \textbf{LangGraph} and \textbf{Microsoft AutoGen} are essential for this study.
+\end{itemize}
+
+\section{Algorithmic Prompt Optimization}
+As agentic systems scale, manual prompt tweaking becomes unsustainable.
+\begin{itemize}
+    \item \textbf{Topics:} LLM-as-a-Judge, Prompt routing, and frameworks like \textbf{DSPy}.
+    \item \textbf{Key Concept:} Use programmatic optimization to find the best prompts and weights based on validation metrics. This transition moves prompt design from an ``art'' to a ``data science'' discipline.
+\end{itemize}
+
+\section{Security and Sandboxing}
+Executing agent-generated code or giving agents access to APIs requires rigorous security boundaries.
+\begin{itemize}
+    \item \textbf{Topics:} WebAssembly (WASM), Ephemeral Docker containers, and Permission Bridges.
+    \item \textbf{Key Concept:} Implement sandboxed execution environments and Human-in-the-Loop (HITL) approval gates to prevent destructive actions and data exfiltration.
+\end{itemize}

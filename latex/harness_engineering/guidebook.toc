@@ -1,0 +1,22 @@
+\contentsline {chapter}{\numberline {1}The Foundations of Harness Engineering}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}The Core Philosophy}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}The 5 Pillars of an Agent Harness}{1}{section.1.2}%
+\contentsline {chapter}{\numberline {2}Guidebook for Further AI Agent Study}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Advanced Memory Architectures}{3}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Multi-Agent Orchestration}{3}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Algorithmic Prompt Optimization}{3}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Security and Sandboxing}{4}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Phase 1: Foundations (The Stateless Phase)}{5}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Step 1: API Mastery}{5}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Step 2: Structured Outputs}{6}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Step 3: The ReAct Loop}{8}{section.3.3}%
+\contentsline {chapter}{\numberline {4}Phase 2: ACI and Tool Engineering (The Hands Phase)}{10}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Step 4: Safe SQL Tool}{10}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Step 6: Error-Handling Refinement}{11}{section.4.2}%
+\contentsline {chapter}{\numberline {5}Phase 3: Memory and Orchestration (The Brain Phase)}{13}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Step 7 \& 8: RAG and Context Compaction}{13}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Step 9: State Machines}{14}{section.5.2}%
+\contentsline {chapter}{\numberline {6}Phase 4: Production and Safety (The Harness Phase)}{16}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Step 10: Sandboxed Code Execution}{16}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Step 11: Evaluation Suite}{17}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Step 12: Human-in-the-Loop (HITL)}{18}{section.6.3}%

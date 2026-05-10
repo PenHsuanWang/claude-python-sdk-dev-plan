@@ -1,0 +1,83 @@
+\chapter{Phase 3: Memory and Orchestration (The Brain Phase)}
+
+In this phase, we move beyond stateless interactions to managing context over long-running tasks. We explore how to load just-in-time information (RAG), manage token limits (Compaction), and enforce strict workflows (State Machines).
+
+\section{Step 7 \& 8: RAG and Context Compaction}
+We treat the context window like RAM and external storage like a hard drive. Step 7 focuses on retrieving documentation on demand, while Step 8 introduces a method to summarize long histories to stay within token limits.
+
+\begin{lstlisting}[caption={step7\_8\_rag\_compaction.py}, label={lst:step7_8}]
+"""
+PHASE 3 - STEP 7 & 8: Memory - RAG + Context Compaction
+Harness Pillar: Context Management
+Goal: Just-in-time retrieval and proactive context management.
+"""
+
+import json
+import anthropic
+
+KNOWLEDGE_BASE = {"python_async": {"content": "asyncio enables concurrent code..."}}
+
+def simple_retrieval(query: str):
+    # Keyword-based retrieval (simplified)
+    return [doc for doc in KNOWLEDGE_BASE.values() if any(word in doc['content'] for word in query.split())]
+
+def compact_history(messages: list):
+    """Summarize the conversation history down to bullet points."""
+    history_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages[1:-2])
+    summary_response = client.messages.create(
+        model="claude-opus-4-5-20251101",
+        max_tokens=512,
+        messages=[{"role": "user", "content": f"Summarize concisely:\n{history_text}"}],
+    )
+    summary = summary_response.content[0].text
+    return [messages[0], {"role": "user", "content": f"[SUMMARY]\n{summary}"}, *messages[-2:]]
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item NEVER stuff all documents into the context window upfront; retrieve on demand to save tokens and maintain focus.
+    \item Estimate tokens before every API call and compact the history proactively when approaching limits.
+    \item Always preserve the original first message and the most recent context during compaction.
+\end{itemize}
+
+\section{Step 9: State Machines}
+A state machine forces an agent into programmatic, verifiable stages. This prevents the agent from skipping planning, rushing to action, or forgetting to validate its output.
+
+\begin{lstlisting}[caption={step9\_state\_machine.py}, label={lst:step9}]
+"""
+PHASE 3 - STEP 9: State Machine (Plan -> Execute -> Review)
+Harness Pillar: Standard Workflows & Refinement Loops
+Goal: Enforce a strict Plan -> Execute -> Review workflow.
+"""
+
+from enum import Enum
+from dataclasses import dataclass
+
+class State(Enum):
+    PLAN = 1; EXECUTE = 2; REVIEW = 3; DONE = 4
+
+@dataclass
+class AgentContext:
+    task: str; state: State = State.PLAN; plan: list = None
+
+def run_state_machine(task: str):
+    ctx = AgentContext(task=task)
+    while ctx.state != State.DONE:
+        if ctx.state == State.PLAN:
+            ctx.plan = ["Step 1", "Step 2"] # Simplified planning
+            ctx.state = State.EXECUTE
+        elif ctx.state == State.EXECUTE:
+            # Execute tools based on plan
+            ctx.state = State.REVIEW
+        elif ctx.state == State.REVIEW:
+            # Separate judge call verifies results
+            ctx.state = State.DONE
+    return "Task Completed."
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item A state machine removes ambiguity from the agentic process by enforcing verified stages.
+    \item Use different system prompts for different roles (Planner, Executor, Judge) to maintain professional separation.
+    \item The Review stage (LLM-as-judge) should ideally use a separate model call to avoid self-serving bias from the Executor.
+\end{itemize}

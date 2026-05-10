@@ -1,0 +1,105 @@
+\chapter{Phase 2: ACI and Tool Engineering (The Hands Phase)}
+
+The goal of this phase is to build robust interfaces that agents can reliably use. We move from simple functions to tools with built-in safety guardrails and error-handling loops.
+
+\section{Step 4: Safe SQL Tool}
+This step demonstrates building a read-only SQL tool. We implement essential ACI guardrails: enforcing \texttt{SELECT}-only queries, injecting \texttt{LIMIT} clauses, and catching SQL errors to return them as structured JSON for self-correction.
+
+\begin{lstlisting}[caption={step4\_sql\_tool.py}, label={lst:step4}]
+"""
+PHASE 2 - STEP 4: ACI - Safe SQL Read Tool
+Harness Pillar: ACI (Agent-Computer Interface)
+Goal: Build a read-only SQL tool with safety guardrails.
+"""
+
+import sqlite3
+import re
+import json
+
+MAX_ROWS = 50
+FORBIDDEN_PATTERNS = [r"\bDROP\b", r"\bDELETE\b", r"\bINSERT\b", r"\bUPDATE\b"]
+
+def safe_sql_query(query: str, db_path: str) -> dict:
+    query = query.strip()
+    # Guardrail: Only SELECT allowed
+    if not query.upper().lstrip().startswith("SELECT"):
+        return {"success": False, "error": "FORBIDDEN: Only SELECT allowed."}
+
+    # Guardrail: Block mutation keywords
+    for pattern in FORBIDDEN_PATTERNS:
+        if re.search(pattern, query, re.IGNORECASE):
+            return {"success": False, "error": f"FORBIDDEN: Disallowed keyword."}
+
+    # Guardrail: Inject LIMIT
+    if "LIMIT" not in query.upper():
+        query = f"{query.rstrip(';')} LIMIT {MAX_ROWS};"
+
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(query)
+        rows = [dict(row) for row in cur.fetchall()]
+        conn.close()
+        return {"success": True, "rows": rows}
+    except sqlite3.Error as e:
+        return {"success": False, "error": str(e), "hint": "Check column names."}
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item The ACI Observation Layer should be read-only by default to protect your data.
+    \item Always return errors as structured JSON, not exceptions; the agent reads the error and self-corrects.
+    \item Inject \texttt{LIMIT} automatically to prevent performance issues.
+\end{itemize}
+
+\section{Step 6: Error-Handling Refinement}
+The refinement loop is what separates a fragile script from a resilient agent. By setting \texttt{is\_error=True} and providing the full stack trace, we enable Claude to fix its own mistakes autonomously.
+
+\begin{lstlisting}[caption={step6\_error\_refinement.py}, label={lst:step6}]
+"""
+PHASE 2 - STEP 6: Error-Handling Refinement Loop
+Harness Pillar: Standard Workflows & Refinement Loops
+Goal: Feed tool errors back to the model so it can self-correct.
+"""
+
+import anthropic
+import json
+
+def run_self_correcting_agent(task: str):
+    messages = [{"role": "user", "content": task}]
+    while True:
+        response = client.messages.create(
+            model="claude-opus-4-5-20251101",
+            max_tokens=2048,
+            tools=TOOLS,
+            messages=messages,
+        )
+        messages.append({"role": "assistant", "content": response.content})
+
+        if response.stop_reason == "end_turn":
+            return response.content[-1].text
+
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    # Simulated execution with error
+                    result = "NameError: name 'fib' is not defined"
+                    is_error = True
+                    
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                        "is_error": is_error,  # Critical signal for self-correction
+                    })
+            messages.append({"role": "user", "content": tool_results})
+\end{lstlisting}
+
+\subsection*{Key Takeaways}
+\begin{itemize}
+    \item \texttt{is\_error=True} in the tool result is the signal that activates self-correction.
+    \item Include the full error or stack trace in the tool result content.
+    \item The refinement loop is essential for production agents operating in real-world, error-prone environments.
+\end{itemize}

@@ -1,0 +1,156 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+% Define colors for code listings
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Setup listings
+\lstset{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=single
+}
+
+\title{Building a Production AI Agent from Scratch \\ \large Local File Reader \& Summarizer MVP}
+\author{Software Engineering Team}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction \& Fundamentals}
+
+\section{LLM Fundamentals}
+Large Language Models (LLMs) like Claude are fundamentally \textbf{stateless}. They do not retain memory between independent API calls. To maintain a conversation, the entire history must be sent back to the model with every new request.
+
+In the Anthropic SDK, this is managed via the \texttt{messages} list, which alternates between roles:
+\begin{itemize}
+    \item \texttt{user}: The human participant.
+    \item \texttt{assistant}: The Claude model.
+\end{itemize}
+
+\section{The ReAct Loop}
+ReAct (Reasoning and Acting) is a paradigm that allows LLMs to interact with external tools. The process follows a loop:
+\begin{enumerate}
+    \item \textbf{Reasoning}: The model analyzes the user request and decides whether it needs external information.
+    \item \textbf{Acting}: If the model decides to use a tool, it returns a \texttt{stop\_reason == "tool\_use"}.
+    \item \textbf{Execution}: The application executes the requested Python function.
+    \item \textbf{Observation}: The application feeds the result back to the model as a \texttt{tool\_result} within a \texttt{user} turn.
+    \item \textbf{Iteration}: The loop repeats until the model provides a final answer (\texttt{stop\_reason == "end\_turn"}).
+\end{enumerate}
+
+\section{Function Calling}
+Function calling (or Tool Use) involves providing Claude with a JSON Schema that describes a Python function's name, purpose, and parameters. Claude uses this schema to format a request for your code to execute.
+
+\chapter{Project Architecture}
+
+\section{Clean Architecture Layers}
+The project follows a 4-layer Clean Architecture to ensure separation of concerns:
+\begin{enumerate}
+    \item \textbf{Domain Layer}: Core business entities (dataclasses and exceptions) with zero external dependencies.
+    \item \textbf{Infrastructure Layer}: Real-world interactions (file system access, session stores).
+    \item \textbf{Application Layer}: Orchestrates the business logic and the agentic loop.
+    \item \textbf{Presentation Layer}: FastAPI routers and Pydantic schemas for HTTP communication.
+\end{enumerate}
+
+\section{Dependency Management}
+The project uses \texttt{uv}, a fast Python package manager. The \texttt{pyproject.toml} defines dependencies including \texttt{fastapi}, \texttt{anthropic}, and \texttt{pydantic-settings}.
+
+\chapter{Core Implementation}
+
+\section{The Domain Model}
+The \texttt{AgentSession} dataclass represents a conversation thread.
+\begin{lstlisting}[language=Python, caption=app/domain/models.py]
+@dataclass
+class AgentSession:
+    session_id: str
+    messages: list[dict[str, Any]] = field(default_factory=list)
+
+    def add_user_message(self, content: str) -> None:
+        self.messages.append({"role": "user", "content": content})
+
+    def add_assistant_message(self, content: Any) -> None:
+        self.messages.append({"role": "assistant", "content": content})
+
+    def add_tool_results(self, tool_results: list[dict[str, Any]]) -> None:
+        self.messages.append({"role": "user", "content": tool_results})
+\end{lstlisting}
+
+\section{The Agentic Loop}
+The \texttt{AgentService} manages the iterative tool-use cycle.
+\begin{lstlisting}[language=Python, caption=app/services/agent.py (Simplified)]
+async def run(self, session: AgentSession) -> str:
+    for iteration in range(MAX_LOOP_ITERATIONS):
+        response = await client.messages.create(
+            model=settings.claude_model,
+            tools=TOOL_DEFINITIONS,
+            messages=session.messages,
+        )
+
+        if response.stop_reason == "end_turn":
+            session.add_assistant_message(serialize(response.content))
+            return extract_text(response)
+
+        if response.stop_reason == "tool_use":
+            session.add_assistant_message(serialize(response.content))
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    result = execute_tool(block.name, block.input)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+            session.add_tool_results(tool_results)
+\end{lstlisting}
+
+\chapter{Security \& Security Patterns}
+
+\section{Path Traversal Prevention}
+To prevent unauthorized file access, the tool layer uses \texttt{Path.resolve()} followed by a parent check.
+\begin{lstlisting}[language=Python]
+requested = (DOCS_DIR / file_name).resolve()
+if DOCS_DIR not in requested.parents and requested != DOCS_DIR:
+    return "Error: Access denied"
+\end{lstlisting}
+
+\section{Secret Management}
+API keys are protected using Pydantic's \texttt{SecretStr}, ensuring they are never logged or exposed in JSON outputs.
+
+\chapter{Conclusion}
+This architecture provides a robust, production-ready foundation for AI agents. By decoupling the LLM loop from the transport layer and enforcing strict security patterns, we build agents that are both capable and safe.
+
+\end{document}
