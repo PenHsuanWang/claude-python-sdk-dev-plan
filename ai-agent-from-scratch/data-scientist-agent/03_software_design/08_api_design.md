@@ -135,7 +135,7 @@ class AnalysisResponse(BaseModel):
             "notebook_available": False,
             "unit_validations": [{"quantity": "thermal_efficiency", "is_valid": True}],
             "iterations_used": 3,
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-6",
         }
     }}
 ```
@@ -531,7 +531,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Data Scientist AI Agent",
         description=(
-            "Conversational AI for data analysis powered by Claude claude-3-5-sonnet. "
+            "Conversational AI for data analysis powered by Claude claude-sonnet-4-6. "
             "Combines ReAct reasoning, Python code execution, physical unit validation, "
             "and Jupyter notebook export."
         ),

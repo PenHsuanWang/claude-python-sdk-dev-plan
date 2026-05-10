@@ -123,7 +123,7 @@ from pathlib import Path
 class Settings(BaseSettings):
     # Existing fields (unchanged)
     anthropic_api_key: str
-    claude_model: str = "claude-3-5-sonnet-20241022"
+    claude_model: str = "claude-sonnet-4-6"
     max_tokens: int = 8192
 
     # New fields with defaults

@@ -3,7 +3,7 @@
 ## Overview
 
 Phase 6 wires the DataScienceAgentService into the FastAPI application with two new routers:
-- `/api/v1/analysis` — run analysis, continue session, download notebook
+- `/api/v1/analysis` — chat-style analysis, continue session, download notebook
 - `/api/v1/datasets` — list and inspect datasets
 
 ---
@@ -104,17 +104,19 @@ class SessionSummary(BaseModel):
 
 ## 2. Session Store
 
+If you already implemented `app/services/memory.py` from the base tutorial, keep that file and extend the existing `InMemorySessionStore` with `get_or_create_analysis(...)` rather than creating a parallel store module.
+
 ```python
-# app/services/session_store.py
-"""In-memory session store for AnalysisSession objects."""
+# app/services/memory.py (extend existing MVP store)
+"""In-memory session store for AgentSession + AnalysisSession objects."""
 from __future__ import annotations
 import threading
 from app.domain.analysis_models import AnalysisSession
 from app.domain.exceptions import SessionNotFoundError
 
 
-class AnalysisSessionStore:
-    """Thread-safe in-memory store for AnalysisSession objects."""
+class InMemorySessionStore:
+    """Thread-safe in-memory store for AgentSession and AnalysisSession objects."""
 
     def __init__(self):
         self._sessions: dict[str, AnalysisSession] = {}
@@ -133,7 +135,7 @@ class AnalysisSessionStore:
             raise SessionNotFoundError(session_id)
         return session
 
-    def get_or_create(
+    def get_or_create_analysis(
         self,
         user_message: str,
         session_id: str | None = None,
@@ -154,7 +156,7 @@ class AnalysisSessionStore:
             self._sessions.pop(session_id, None)
 
 
-session_store = AnalysisSessionStore()
+session_store = InMemorySessionStore()
 ```
 
 ---
@@ -183,7 +185,7 @@ from app.schemas.analysis import (
     SessionSummary,
 )
 from app.services.data_agent import DataScienceAgentService
-from app.services.session_store import session_store
+from app.services.memory import session_store
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -192,7 +194,7 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 _agent_service = DataScienceAgentService()
 
 
-@router.post("/run", response_model=AnalysisResponse)
+@router.post("/chat", response_model=AnalysisResponse)
 async def run_analysis(request: AnalysisRequest) -> AnalysisResponse:
     """
     Run a data science analysis using the ReAct agent.
@@ -210,7 +212,7 @@ async def run_analysis(request: AnalysisRequest) -> AnalysisResponse:
         )
 
     try:
-        session = session_store.get_or_create(
+        session = session_store.get_or_create_analysis(
             user_message=request.user_message,
             session_id=request.session_id,
             data_dir=data_dir,
@@ -519,7 +521,7 @@ curl -s "$BASE/datasets/power_plant_data.csv/columns?columns=efficiency_pct,gros
   | python3 -m json.tool
 
 # Run analysis (new session)
-curl -s -X POST "$BASE/analysis/run" \
+curl -s -X POST "$BASE/analysis/chat" \
   -H "Content-Type: application/json" \
   -d '{
     "user_message": "What is the mean thermal efficiency and is it physically plausible?",
@@ -528,7 +530,7 @@ curl -s -X POST "$BASE/analysis/run" \
 
 # Continue existing session
 SESSION_ID="<session_id from previous response>"
-curl -s -X POST "$BASE/analysis/run" \
+curl -s -X POST "$BASE/analysis/chat" \
   -H "Content-Type: application/json" \
   -d "{
     \"session_id\": \"$SESSION_ID\",
@@ -629,7 +631,7 @@ class TestAnalysisEndpoints:
                 new=AsyncMock(return_value="test system prompt")
             ):
                 response = client.post(
-                    "/api/v1/analysis/run",
+                    "/api/v1/analysis/chat",
                     json={"user_message": "What is the efficiency?"},
                 )
 
@@ -666,7 +668,7 @@ class TestAnalysisEndpoints:
             ):
                 # First request
                 r1 = client.post(
-                    "/api/v1/analysis/run",
+                    "/api/v1/analysis/chat",
                     json={"user_message": "What is the mean efficiency?"},
                 )
                 assert r1.status_code == 200
@@ -674,7 +676,7 @@ class TestAnalysisEndpoints:
 
                 # Follow-up
                 r2 = client.post(
-                    "/api/v1/analysis/run",
+                    "/api/v1/analysis/chat",
                     json={
                         "session_id": session_id,
                         "user_message": "What is the correlation between efficiency and power?",
@@ -696,7 +698,7 @@ class TestAnalysisEndpoints:
                 new=AsyncMock(return_value="prompt")
             ):
                 r = client.post(
-                    "/api/v1/analysis/run",
+                    "/api/v1/analysis/chat",
                     json={"user_message": "Test."},
                 )
         session_id = r.json()["session_id"]
@@ -721,7 +723,7 @@ class TestAnalysisEndpoints:
                 new=AsyncMock(return_value="prompt")
             ):
                 r = client.post(
-                    "/api/v1/analysis/run",
+                    "/api/v1/analysis/chat",
                     json={"user_message": "Test."},
                 )
         session_id = r.json()["session_id"]
@@ -741,7 +743,7 @@ class TestAnalysisEndpoints:
                 new=AsyncMock(return_value="prompt")
             ):
                 r = client.post(
-                    "/api/v1/analysis/run",
+                    "/api/v1/analysis/chat",
                     json={"user_message": "Test."},
                 )
         session_id = r.json()["session_id"]
@@ -762,7 +764,7 @@ After Phase 6, the complete system is running:
 
 ```
 app/schemas/analysis.py          -- Pydantic request/response models
-app/services/session_store.py    -- In-memory AnalysisSession store
+app/services/memory.py           -- Extended InMemorySessionStore with get_or_create_analysis()
 app/api/v1/analysis.py           -- 7 analysis endpoints
 app/api/v1/datasets.py           -- 3 dataset endpoints
 app/main.py                      -- Updated with new routers + lifespan

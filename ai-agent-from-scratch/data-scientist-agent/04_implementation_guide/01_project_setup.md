@@ -9,6 +9,14 @@ This guide extends the existing `ai-agent-mvp` FastAPI application into a full *
 - Domain knowledge retrieval
 - Figure generation and notebook export
 
+### Alignment with `antropic_python_sdk_build_from_scratch_tutorial`
+
+This implementation stays on top of the base tutorial architecture:
+- Keep existing MVP flow untouched: `POST /api/v1/chat` + `AgentService` + `tools.py`
+- Extend session handling in `app/services/memory.py` (do not introduce a parallel session store module)
+- Add new capability as parallel modules: `data_agent.py`, analysis/datasets routers, and infrastructure backends
+- Preserve dependency direction from Chapter 03: Presentation → Application → Domain, Infrastructure → Domain
+
 ---
 
 ## 1. Prerequisites
@@ -543,7 +551,7 @@ curl -s http://localhost:8000/health | python3 -m json.tool
 ### First analysis request
 
 ```bash
-curl -s -X POST http://localhost:8000/api/v1/analysis/run \
+curl -s -X POST http://localhost:8000/api/v1/analysis/chat \
   -H "Content-Type: application/json" \
   -d '{
     "user_message": "Load the power plant dataset and compute the mean thermal efficiency.",

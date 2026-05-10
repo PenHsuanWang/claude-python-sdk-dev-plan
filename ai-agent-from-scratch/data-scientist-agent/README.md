@@ -84,40 +84,39 @@ The guide is structured as a progressive learning path: you begin with fundament
 4. [01_fundamentals/04_data_science_workflow.md](01_fundamentals/04_data_science_workflow.md) — CRISP-DM + AI augmentation, EDA checklist
 
 ### Anthropic SDK Reference
-5. [02_anthropic_sdk_reference/01_client_setup.md](02_anthropic_sdk_reference/01_client_setup.md) — Client initialization, auth, retries
-6. [02_anthropic_sdk_reference/02_messages_api.md](02_anthropic_sdk_reference/02_messages_api.md) — Messages API deep-dive, stop_reasons
-7. [02_anthropic_sdk_reference/03_tool_definitions.md](02_anthropic_sdk_reference/03_tool_definitions.md) — Tool schemas, strict mode, input validation
-8. [02_anthropic_sdk_reference/04_tool_use_loop.md](02_anthropic_sdk_reference/04_tool_use_loop.md) — tool_use → tool_result protocol
-9. [02_anthropic_sdk_reference/05_server_tools.md](02_anthropic_sdk_reference/05_server_tools.md) — code_execution, web_search, Files API
-10. [02_anthropic_sdk_reference/06_model_selection.md](02_anthropic_sdk_reference/06_model_selection.md) — Model comparison, cost, context windows
-11. [02_anthropic_sdk_reference/07_streaming.md](02_anthropic_sdk_reference/07_streaming.md) — Streaming responses, token events
-12. [02_anthropic_sdk_reference/08_error_handling.md](02_anthropic_sdk_reference/08_error_handling.md) — API errors, retries, timeouts
+5. [02_anthropic_sdk_reference/01_messages_api.md](02_anthropic_sdk_reference/01_messages_api.md) — Messages API deep-dive, stop reasons, content blocks
+6. [02_anthropic_sdk_reference/02_tool_use_client.md](02_anthropic_sdk_reference/02_tool_use_client.md) — Client-side tool-use loop and dispatch
+7. [02_anthropic_sdk_reference/03_tool_use_server.md](02_anthropic_sdk_reference/03_tool_use_server.md) — Server tools, pause_turn flow, orchestration
+8. [02_anthropic_sdk_reference/04_code_execution_tool.md](02_anthropic_sdk_reference/04_code_execution_tool.md) — Anthropic code execution tool details
+9. [02_anthropic_sdk_reference/05_files_api.md](02_anthropic_sdk_reference/05_files_api.md) — Files API upload/use patterns
+10. [02_anthropic_sdk_reference/06_models_reference.md](02_anthropic_sdk_reference/06_models_reference.md) — Model selection and cost/capability matrix
+11. [02_anthropic_sdk_reference/07_programmatic_tool_calling.md](02_anthropic_sdk_reference/07_programmatic_tool_calling.md) — Programmatic tool calling and allowed_callers
 
 ### Software Design
-13. [03_software_design/01_domain_models.md](03_software_design/01_domain_models.md) — All dataclasses: AnalysisSession, DatasetMeta, etc.
-14. [03_software_design/02_tool_catalog.md](03_software_design/02_tool_catalog.md) — All 14 tools: signature, schema, return format
-15. [03_software_design/03_tool_execution_engine.md](03_software_design/03_tool_execution_engine.md) — ToolExecutor dispatch, error handling
-16. [03_software_design/04_code_execution_backends.md](03_software_design/04_code_execution_backends.md) — Subprocess, Jupyter, Anthropic backends
-17. [03_software_design/05_physical_validation_engine.md](03_software_design/05_physical_validation_engine.md) — pint integration, range checks, law checks
-18. [03_software_design/06_notebook_exporter.md](03_software_design/06_notebook_exporter.md) — nbformat, cell accumulation, export
-19. [03_software_design/07_agent_service.md](03_software_design/07_agent_service.md) — DataScienceAgentService, ReAct orchestration
-20. [03_software_design/08_api_design.md](03_software_design/08_api_design.md) — New endpoints, request/response schemas
+12. [03_software_design/01_system_overview.md](03_software_design/01_system_overview.md) — C4 context/container/component architecture
+13. [03_software_design/02_domain_layer_design.md](03_software_design/02_domain_layer_design.md) — Domain entities and value objects
+14. [03_software_design/03_react_service_design.md](03_software_design/03_react_service_design.md) — ReAct engine and parser design
+15. [03_software_design/04_tool_system_design.md](03_software_design/04_tool_system_design.md) — 14-tool taxonomy, schemas, dispatch model
+16. [03_software_design/05_code_execution_design.md](03_software_design/05_code_execution_design.md) — Subprocess/Jupyter/Anthropic backends
+17. [03_software_design/06_physical_validation_design.md](03_software_design/06_physical_validation_design.md) — Unit/range/law validation pipeline
+18. [03_software_design/07_jupyter_bridge_design.md](03_software_design/07_jupyter_bridge_design.md) — Kernel lifecycle and notebook generation
+19. [03_software_design/08_api_design.md](03_software_design/08_api_design.md) — API contracts and route behavior
 
 ### Implementation Guide
-21. [04_implementation_guide/01_project_setup.md](04_implementation_guide/01_project_setup.md) — uv, pyproject.toml, env vars
-22. [04_implementation_guide/02_domain_layer.md](04_implementation_guide/02_domain_layer.md) — Implement all domain models
-23. [04_implementation_guide/03_infrastructure_layer.md](04_implementation_guide/03_infrastructure_layer.md) — File store, dataset loader
-24. [04_implementation_guide/04_code_execution.md](04_implementation_guide/04_code_execution.md) — All three backends end-to-end
-25. [04_implementation_guide/05_tool_implementations.md](04_implementation_guide/05_tool_implementations.md) — All 14 tools, tested
-26. [04_implementation_guide/06_agent_service_impl.md](04_implementation_guide/06_agent_service_impl.md) — Full ReAct loop implementation
-27. [04_implementation_guide/07_api_layer.md](04_implementation_guide/07_api_layer.md) — FastAPI routes, middleware
-28. [04_implementation_guide/08_testing.md](04_implementation_guide/08_testing.md) — pytest, fixtures, integration tests
+20. [04_implementation_guide/01_project_setup.md](04_implementation_guide/01_project_setup.md) — Setup, dependencies, project structure
+21. [04_implementation_guide/02_phase1_foundation.md](04_implementation_guide/02_phase1_foundation.md) — Domain + config foundation
+22. [04_implementation_guide/03_phase2_tools.md](04_implementation_guide/03_phase2_tools.md) — Tool implementations and registry
+23. [04_implementation_guide/04_phase3_react_engine.md](04_implementation_guide/04_phase3_react_engine.md) — Parser/context/service loop
+24. [04_implementation_guide/05_phase4_validation.md](04_implementation_guide/05_phase4_validation.md) — Physical validation layer
+25. [04_implementation_guide/06_phase5_jupyter.md](04_implementation_guide/06_phase5_jupyter.md) — Jupyter bridge integration
+26. [04_implementation_guide/07_phase6_api.md](04_implementation_guide/07_phase6_api.md) — FastAPI integration endpoints
 
 ### Reference
-29. [05_reference/01_configuration_reference.md](05_reference/01_configuration_reference.md) — All Settings fields
-30. [05_reference/02_tool_api_reference.md](05_reference/02_tool_api_reference.md) — Tool quick-reference card
-31. [05_reference/03_troubleshooting.md](05_reference/03_troubleshooting.md) — Common errors and fixes
-32. [05_reference/04_worked_example.md](05_reference/04_worked_example.md) — Full walkthrough with power plant dataset
+27. [05_reference/01_sdk_cheatsheet.md](05_reference/01_sdk_cheatsheet.md) — Anthropic SDK quick-reference
+28. [05_reference/02_tool_definitions_catalog.md](05_reference/02_tool_definitions_catalog.md) — Full 14-tool catalog and JSON schemas
+29. [05_reference/03_react_prompt_templates.md](05_reference/03_react_prompt_templates.md) — ReAct prompt templates by domain
+30. [05_reference/04_physical_constants.md](05_reference/04_physical_constants.md) — Physical constants and domain ranges
+31. [05_reference/05_troubleshooting.md](05_reference/05_troubleshooting.md) — Operational troubleshooting guide
 
 ---
 
@@ -136,7 +135,7 @@ uv run uvicorn app.main:app --reload --port 8001
 # 3. Send an analysis request
 curl -X POST http://localhost:8001/api/v1/analysis/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "Analyze the turbine_data.csv dataset and validate all efficiency values", "session_id": null}'
+  -d '{"user_message": "Analyze the turbine_data.csv dataset and validate all efficiency values", "session_id": null}'
 ```
 
 ---
@@ -151,34 +150,33 @@ curl -X POST http://localhost:8001/api/v1/analysis/chat \
 | `01_fundamentals/02_clean_architecture.md` | Concept | Architecture layers and SOLID |
 | `01_fundamentals/03_physical_domain_modeling.md` | Concept | pint, units, domain validation |
 | `01_fundamentals/04_data_science_workflow.md` | Concept | CRISP-DM + AI augmentation |
-| `02_anthropic_sdk_reference/01_client_setup.md` | SDK | Client, auth, retries |
-| `02_anthropic_sdk_reference/02_messages_api.md` | SDK | Messages API parameters |
-| `02_anthropic_sdk_reference/03_tool_definitions.md` | SDK | Tool schema format |
-| `02_anthropic_sdk_reference/04_tool_use_loop.md` | SDK | Tool call/result protocol |
-| `02_anthropic_sdk_reference/05_server_tools.md` | SDK | code_execution, Files API |
-| `02_anthropic_sdk_reference/06_model_selection.md` | SDK | Models, costs, context |
-| `02_anthropic_sdk_reference/07_streaming.md` | SDK | Streaming events |
-| `02_anthropic_sdk_reference/08_error_handling.md` | SDK | Errors and retries |
-| `03_software_design/01_domain_models.md` | Domain | Dataclass definitions |
-| `03_software_design/02_tool_catalog.md` | Application | All 14 tool specs |
-| `03_software_design/03_tool_execution_engine.md` | Application | Dispatcher design |
-| `03_software_design/04_code_execution_backends.md` | Infrastructure | Three runners |
-| `03_software_design/05_physical_validation_engine.md` | Application | Validation engine |
-| `03_software_design/06_notebook_exporter.md` | Infrastructure | Notebook generation |
-| `03_software_design/07_agent_service.md` | Application | ReAct orchestrator |
+| `02_anthropic_sdk_reference/01_messages_api.md` | SDK | Messages API parameters |
+| `02_anthropic_sdk_reference/02_tool_use_client.md` | SDK | Tool use loop (client tools) |
+| `02_anthropic_sdk_reference/03_tool_use_server.md` | SDK | Server tool orchestration |
+| `02_anthropic_sdk_reference/04_code_execution_tool.md` | SDK | Code execution tool behavior |
+| `02_anthropic_sdk_reference/05_files_api.md` | SDK | Files API patterns |
+| `02_anthropic_sdk_reference/06_models_reference.md` | SDK | Model choice and pricing |
+| `02_anthropic_sdk_reference/07_programmatic_tool_calling.md` | SDK | Programmatic tool calling |
+| `03_software_design/01_system_overview.md` | Architecture | System-level design and C4 diagrams |
+| `03_software_design/02_domain_layer_design.md` | Domain | Dataclass/entity design |
+| `03_software_design/03_react_service_design.md` | Application | ReAct orchestration design |
+| `03_software_design/04_tool_system_design.md` | Application | Tool system design |
+| `03_software_design/05_code_execution_design.md` | Infrastructure | Three execution backends |
+| `03_software_design/06_physical_validation_design.md` | Infrastructure | Validation architecture |
+| `03_software_design/07_jupyter_bridge_design.md` | Infrastructure | Jupyter kernel bridge |
 | `03_software_design/08_api_design.md` | Presentation | API routes |
 | `04_implementation_guide/01_project_setup.md` | — | Setup steps |
-| `04_implementation_guide/02_domain_layer.md` | Domain | Implement models |
-| `04_implementation_guide/03_infrastructure_layer.md` | Infrastructure | File/data stores |
-| `04_implementation_guide/04_code_execution.md` | Infrastructure | Code runners |
-| `04_implementation_guide/05_tool_implementations.md` | Application | 14 tools |
-| `04_implementation_guide/06_agent_service_impl.md` | Application | ReAct loop |
-| `04_implementation_guide/07_api_layer.md` | Presentation | FastAPI routes |
-| `04_implementation_guide/08_testing.md` | — | Test strategy |
-| `05_reference/01_configuration_reference.md` | — | All config options |
-| `05_reference/02_tool_api_reference.md` | — | Tool quick-ref |
-| `05_reference/03_troubleshooting.md` | — | Error guide |
-| `05_reference/04_worked_example.md` | — | End-to-end example |
+| `04_implementation_guide/02_phase1_foundation.md` | Domain | Implement domain and config foundations |
+| `04_implementation_guide/03_phase2_tools.md` | Application | Implement tool set |
+| `04_implementation_guide/04_phase3_react_engine.md` | Application | Implement ReAct loop |
+| `04_implementation_guide/05_phase4_validation.md` | Infrastructure | Physical validation implementation |
+| `04_implementation_guide/06_phase5_jupyter.md` | Infrastructure | Jupyter integration |
+| `04_implementation_guide/07_phase6_api.md` | Presentation | FastAPI routes and schemas |
+| `05_reference/01_sdk_cheatsheet.md` | — | SDK quick reference |
+| `05_reference/02_tool_definitions_catalog.md` | — | Tool schema catalog |
+| `05_reference/03_react_prompt_templates.md` | — | Prompt templates |
+| `05_reference/04_physical_constants.md` | — | Constants and ranges |
+| `05_reference/05_troubleshooting.md` | — | Error guide |
 
 ---
 

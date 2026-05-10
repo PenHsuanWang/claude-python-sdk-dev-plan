@@ -59,8 +59,8 @@ The highest-level view showing the system and its external actors.
   │  Anthropic    │  │   Local     │  │   Jupyter Kernel     │
   │  Claude API   │  │ Filesystem  │  │   (Optional)         │
   │               │  │             │  │                      │
-  │  claude-3-5-  │  │  /datasets/ │  │  Python 3.x process  │
-  │  sonnet-*     │  │  /docs/     │  │  running per-session │
+  │  claude-sonnet │  │  /datasets/ │  │  Python 3.x process  │
+  │  -4-6 family   │  │  /docs/     │  │  running per-session │
   │               │  │  /figures/  │  │  kernel via          │
   │  messages API │  │  /notebooks/│  │  jupyter_client      │
   └───────────────┘  └─────────────┘  └──────────────────────┘
@@ -132,7 +132,7 @@ The Data Scientist AI-Agent System decomposed into its runtime containers.
                    ▼                           ▼
   ┌────────────────────────┐    ┌────────────────────────────────┐
   │   Anthropic Claude API  │    │   Jupyter Kernel Process       │
-  │   claude-3-5-sonnet     │    │   (one per AnalysisSession)    │
+  │   claude-sonnet-4-6     │    │   (one per AnalysisSession)    │
   │   messages.create()     │    │   IPykernel / Python 3.12      │
   └────────────────────────┘    └────────────────────────────────┘
 ```
