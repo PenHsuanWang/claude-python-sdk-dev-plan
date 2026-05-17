@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PySpark High-Performance Coding Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Essential Chart Container Styles */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom scrollbar for code blocks */
+        .code-block::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .code-block::-webkit-scrollbar-track {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+
+        .code-block::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        .tab-active {
+            background-color: #eef2ff;
+            color: #4338ca;
+            border-left: 4px solid #4338ca;
+            font-weight: 600;
+        }
+
+        .tab-inactive {
+            color: #4b5563;
+            border-left: 4px solid transparent;
+        }
+
+        .tab-inactive:hover {
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- Chosen Palette: Indigo and Slate. Indigo (#4338ca) provides a sharp, professional tech focus for active elements, while Slate (#475569) and Gray (#f9fafb) offer a clean, readable IDE-like background. -->
+    <!-- Application Structure Plan: A master-detail layout (Sidebar navigation + Main content area). This structure is chosen because coding guides are best consumed as modular, distinct topics (APIs, Joins, Partitions, Memory). Users can jump directly to the optimization technique they need without losing context of the overall playbook. -->
+    <!-- Visualization & Content Choices: 
+  1. UDF Penalty: Goal -> Show serialization overhead of standard UDFs. Viz -> Chart.js Bar Chart. Library -> Chart.js. Justification -> Visually stark comparison of execution times proves why built-ins are better.
+  2. Code Comparisons: Goal -> Teach syntax differences. Viz -> HTML/CSS tabbed code blocks. Library -> Vanilla JS. Justification -> Directly applicable copy-pasteable knowledge.
+  3. Coalesce vs Repartition: Goal -> Explain network shuffle difference. Viz -> Chart.js Doughnut Chart. Library -> Chart.js. Justification -> Shows proportion of network vs local IO.
+-->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar Navigation -->
+        <nav class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col hidden md:flex">
+            <div class="p-6 border-b border-gray-200">
+                <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <span class="text-indigo-600">🚀</span> PySpark Pro
+                </h1>
+                <p class="text-xs text-gray-500 mt-1">High-Performance Coding</p>
+            </div>
+            <div class="flex-grow overflow-y-auto py-4">
+                <button onclick="openTab('functions')" id="btn-functions"
+                    class="tab-active w-full text-left px-6 py-3 transition-colors duration-150">1. Built-ins vs
+                    UDFs</button>
+                <button onclick="openTab('joins')" id="btn-joins"
+                    class="tab-inactive w-full text-left px-6 py-3 transition-colors duration-150">2. Optimizing
+                    Joins</button>
+                <button onclick="openTab('partitions')" id="btn-partitions"
+                    class="tab-inactive w-full text-left px-6 py-3 transition-colors duration-150">3. Partitions &
+                    Shuffles</button>
+                <button onclick="openTab('memory')" id="btn-memory"
+                    class="tab-inactive w-full text-left px-6 py-3 transition-colors duration-150">4. Memory &
+                    Caching</button>
+            </div>
+        </nav>
+
+        <!-- Mobile Header (Visible only on small screens) -->
+        <div class="md:hidden fixed top-0 w-full bg-white shadow z-20 flex flex-col">
+            <div class="p-4 flex justify-between items-center border-b">
+                <h1 class="text-lg font-bold text-gray-900 flex items-center gap-2"><span
+                        class="text-indigo-600">🚀</span> PySpark Pro</h1>
+            </div>
+            <div class="flex overflow-x-auto bg-gray-50 text-sm">
+                <button onclick="openTab('functions')" id="mbtn-functions"
+                    class="px-4 py-3 border-b-2 border-indigo-600 text-indigo-600 font-semibold whitespace-nowrap">Functions</button>
+                <button onclick="openTab('joins')" id="mbtn-joins"
+                    class="px-4 py-3 border-b-2 border-transparent text-gray-600 whitespace-nowrap">Joins</button>
+                <button onclick="openTab('partitions')" id="mbtn-partitions"
+                    class="px-4 py-3 border-b-2 border-transparent text-gray-600 whitespace-nowrap">Partitions</button>
+                <button onclick="openTab('memory')" id="mbtn-memory"
+                    class="px-4 py-3 border-b-2 border-transparent text-gray-600 whitespace-nowrap">Memory</button>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow overflow-y-auto bg-gray-50 p-6 md:p-10 pt-28 md:pt-10">
+            <div class="max-w-4xl mx-auto">
+
+                <!-- SECTION 1: Functions -->
+                <section id="sec-functions" class="fade-in block">
+                    <header class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Built-in Functions vs. UDFs</h2>
+                        <p class="text-gray-600 leading-relaxed">
+                            This section explores how you apply row-level logic. Standard Python UDFs (User Defined
+                            Functions) are the #1 performance killer in PySpark because they force data out of the JVM
+                            into a Python process, serializing row by row. Always prefer Spark's native C-optimized
+                            built-in functions.
+                        </p>
+                    </header>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Execution Time Comparison</h3>
+                        <div class="chart-container">
+                            <canvas id="udfChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-gray-900 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                            <div class="bg-red-500 text-white text-xs font-bold px-4 py-2 uppercase tracking-wide">
+                                Avoid: Python UDF</div>
+                            <div class="p-4 code-block overflow-x-auto flex-grow">
+                                <pre class="text-red-300 font-mono text-sm leading-snug"><code>from pyspark.sql.functions import udf
+from pyspark.sql.types import IntegerType
+
+# Defines a standard Python function
+def square(x):
+    if x is not None:
+        return x * x
+    return None
+
+# Registers it as a UDF (Forces serialization)
+square_udf = udf(square, IntegerType())
+
+# Extremely slow on large datasets
+df = df.withColumn("squared", square_udf(df.value))
+</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                            <div class="bg-green-500 text-white text-xs font-bold px-4 py-2 uppercase tracking-wide">
+                                Prefer: Spark Built-ins</div>
+                            <div class="p-4 code-block overflow-x-auto flex-grow">
+                                <pre class="text-green-300 font-mono text-sm leading-snug"><code>import pyspark.sql.functions as F
+
+# Executes directly in the JVM via Catalyst
+# Leverages Tungsten physical execution
+
+df = df.withColumn("squared", 
+                   F.col("value") * F.col("value"))
+
+# OR using mathematical built-ins
+# df = df.withColumn("squared", F.pow(F.col("value"), 2))
+</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 2: Joins -->
+                <section id="sec-joins" class="fade-in hidden">
+                    <header class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Optimizing Joins & Shuffles</h2>
+                        <p class="text-gray-600 leading-relaxed">
+                            Joining tables is the most common cause of network bottlenecks (shuffles). This section
+                            explains how to use Broadcast joins to eliminate network traffic when combining a massive
+                            table with a smaller lookup table.
+                        </p>
+                    </header>
+
+                    <div class="bg-indigo-50 border-l-4 border-indigo-600 p-4 mb-8 rounded-r-md">
+                        <h4 class="font-bold text-indigo-900">The Broadcast Hash Join</h4>
+                        <p class="text-sm text-indigo-800 mt-1">If one DataFrame is small enough to fit in the memory of
+                            a single executor (typically < 10MB to 2GB depending on config), you should "broadcast" it.
+                                Spark sends a full copy of the small table to every executor, completely eliminating the
+                                need to shuffle the large table across the network.</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 relative">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h3 class="text-lg font-semibold text-gray-800">Join Strategy Implementation</h3>
+                            <div class="flex gap-2">
+                                <button onclick="toggleJoin('standard')" id="btn-join-std"
+                                    class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm font-medium hover:bg-gray-300 transition">Standard
+                                    Join</button>
+                                <button onclick="toggleJoin('broadcast')" id="btn-join-brd"
+                                    class="px-3 py-1 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 transition">Broadcast
+                                    Join</button>
+                            </div>
+                        </div>
+
+                        <div id="join-standard" class="block">
+                            <p class="text-sm text-gray-600 mb-3"><strong>Sort-Merge Join (Default):</strong> Both
+                                tables are hashed, shuffled across the network so matching keys land on the same node,
+                                sorted, and then merged. High network I/O.</p>
+                            <div class="bg-gray-900 rounded p-4 code-block overflow-x-auto">
+                                <pre class="text-gray-300 font-mono text-sm leading-snug"><code>large_transactions_df = spark.read.parquet("...")
+small_stores_df = spark.read.parquet("...")
+
+# Triggers a massive network shuffle of transactions
+joined_df = large_transactions_df.join(
+    small_stores_df,
+    on="store_id",
+    how="inner"
+)
+</code></pre>
+                            </div>
+                        </div>
+
+                        <div id="join-broadcast" class="hidden">
+                            <p class="text-sm text-gray-600 mb-3"><strong>Broadcast Hash Join:</strong> The small table
+                                is shipped to all nodes. The large table is read and joined locally without ever moving
+                                across the network. Extremely fast.</p>
+                            <div class="bg-gray-900 rounded p-4 code-block overflow-x-auto border-2 border-indigo-500">
+                                <pre class="text-indigo-300 font-mono text-sm leading-snug"><code>import pyspark.sql.functions as F
+
+large_transactions_df = spark.read.parquet("...")
+small_stores_df = spark.read.parquet("...")
+
+# The 'broadcast' hint instructs Spark to ship the small table
+joined_df = large_transactions_df.join(
+    <span class="text-green-400 font-bold">F.broadcast(small_stores_df)</span>,
+    on="store_id",
+    how="inner"
+)
+</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 3: Partitions -->
+                <section id="sec-partitions" class="fade-in hidden">
+                    <header class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Partitions: Repartition vs Coalesce</h2>
+                        <p class="text-gray-600 leading-relaxed">
+                            Controlling the number of partitions dictates your cluster's parallelism. Too few partitions
+                            means idle CPUs. Too many means overhead. This section covers how to safely change partition
+                            counts.
+                        </p>
+                    </header>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div
+                            class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center items-center">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2 text-center">Network IO Comparison</h3>
+                            <div class="chart-container !h-[250px] w-full">
+                                <canvas id="partitionChart"></canvas>
+                            </div>
+                            <p class="text-xs text-gray-500 text-center mt-2">Decreasing partitions from 100 to 10</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-white p-5 border border-gray-200 rounded-xl shadow-sm">
+                                <h4 class="font-bold text-gray-800 mb-2 text-lg">🔥 df.repartition(n)</h4>
+                                <p class="text-sm text-gray-600 mb-3">
+                                    Does a full network shuffle of the data to create equal-sized partitions.
+                                </p>
+                                <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc marker:text-red-500">
+                                    <li>Use to <strong>increase</strong> partitions.</li>
+                                    <li>Use to fix severely skewed data (using a column:
+                                        <code>repartition("col")</code>).</li>
+                                    <li><strong>Expensive!</strong> Involves full data movement.</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-white p-5 border border-gray-200 rounded-xl shadow-sm">
+                                <h4 class="font-bold text-gray-800 mb-2 text-lg">⚡ df.coalesce(n)</h4>
+                                <p class="text-sm text-gray-600 mb-3">
+                                    Combines existing partitions on the same node. Minimizes data movement.
+                                </p>
+                                <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc marker:text-green-500">
+                                    <li>Use <strong>only to decrease</strong> partitions.</li>
+                                    <li>Use before writing to disk to avoid 10,000 tiny files.</li>
+                                    <li><strong>Cheap!</strong> Avoids full network shuffles.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 4: Memory -->
+                <section id="sec-memory" class="fade-in hidden">
+                    <header class="mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Memory Management: Caching</h2>
+                        <p class="text-gray-600 leading-relaxed">
+                            Spark uses lazy evaluation. If you derive a complex DataFrame and use it in multiple
+                            downstream actions (like writing to multiple places, or displaying and saving), Spark will
+                            recompute it from scratch every time unless you cache it.
+                        </p>
+                    </header>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">The Caching Lifecycle</h3>
+                        <div class="bg-gray-900 rounded p-4 code-block overflow-x-auto text-sm leading-relaxed">
+                            <span class="text-gray-500"># 1. Read Raw Data</span>
+                            <span class="text-blue-300">raw_df</span> = spark.read.parquet("s3://data/raw/")
+
+                            <span class="text-gray-500"># 2. Expensive Transformations (Joins, Aggregations,
+                                Regex)</span>
+                            <span class="text-blue-300">clean_df</span> = raw_df.join(ref_df,
+                            "id").groupBy("category").sum("amount")
+
+                            <span class="text-green-400 font-bold"># 3. CACHE the intermediate result</span>
+                            <span class="text-gray-500"># Use .persist() if you need to specify MEMORY_ONLY,
+                                MEMORY_AND_DISK, etc.</span>
+                            <span class="text-blue-300">clean_df</span><span class="text-green-400">.cache()</span>
+
+                            <span class="text-gray-500"># 4. First Action: Triggers computation AND caches data in
+                                executors</span>
+                            total_count = <span class="text-blue-300">clean_df</span>.count()
+
+                            <span class="text-gray-500"># 5. Second Action: Lightning fast. Reads directly from
+                                memory!</span>
+                            <span class="text-blue-300">clean_df</span>.write.format("delta").save("s3://data/gold/")
+
+                            <span class="text-red-400 font-bold"># 6. UNPERSIST: Crucial step to free up cluster memory
+                                when done</span>
+                            <span class="text-blue-300">clean_df</span><span class="text-red-400">.unpersist()</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        const sections = ['functions', 'joins', 'partitions', 'memory'];
+
+        function openTab(tabId) {
+            sections.forEach(id => {
+                // Desktop Nav
+                const btn = document.getElementById(`btn-${id}`);
+                // Mobile Nav
+                const mbtn = document.getElementById(`mbtn-${id}`);
+                // Content Section
+                const section = document.getElementById(`sec-${id}`);
+
+                if (id === tabId) {
+                    btn.classList.replace('tab-inactive', 'tab-active');
+                    mbtn.classList.replace('border-transparent', 'border-indigo-600');
+                    mbtn.classList.replace('text-gray-600', 'text-indigo-600');
+                    mbtn.classList.add('font-semibold');
+
+                    section.classList.remove('hidden');
+                    section.classList.add('block');
+
+                    // Render charts specifically when their tab becomes visible
+                    if (tabId === 'functions') renderUdfChart();
+                    if (tabId === 'partitions') renderPartitionChart();
+                } else {
+                    btn.classList.replace('tab-active', 'tab-inactive');
+                    mbtn.classList.replace('border-indigo-600', 'border-transparent');
+                    mbtn.classList.replace('text-indigo-600', 'text-gray-600');
+                    mbtn.classList.remove('font-semibold');
+
+                    section.classList.remove('block');
+                    section.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Interactive Code Logic ---
+        function toggleJoin(type) {
+            const stdBtn = document.getElementById('btn-join-std');
+            const brdBtn = document.getElementById('btn-join-brd');
+            const stdDiv = document.getElementById('join-standard');
+            const brdDiv = document.getElementById('join-broadcast');
+
+            if (type === 'standard') {
+                stdBtn.className = 'px-3 py-1 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 transition';
+                brdBtn.className = 'px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm font-medium hover:bg-gray-300 transition';
+                stdDiv.classList.replace('hidden', 'block');
+                brdDiv.classList.replace('block', 'hidden');
+            } else {
+                brdBtn.className = 'px-3 py-1 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 transition';
+                stdBtn.className = 'px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm font-medium hover:bg-gray-300 transition';
+                brdDiv.classList.replace('hidden', 'block');
+                stdDiv.classList.replace('block', 'hidden');
+            }
+        }
+
+        // --- Chart.js Implementations ---
+        let udfChartInstance = null;
+        let partitionChartInstance = null;
+        const fontConfig = { family: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial" };
+
+        function renderUdfChart() {
+            const ctx = document.getElementById('udfChart');
+            if (!ctx) return;
+            if (udfChartInstance) udfChartInstance.destroy();
+
+            udfChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Standard Python UDF', 'Pandas Vectorized UDF', 'Spark Built-in Function'],
+                    datasets: [{
+                        label: 'Relative Processing Time (Lower is Better)',
+                        data: [100, 25, 5],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',   // Red
+                            'rgba(245, 158, 11, 0.8)',  // Yellow/Amber
+                            'rgba(34, 197, 94, 0.8)'    // Green
+                        ],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: { label: (ctx) => `Processing Time: ${ctx.parsed.y}x` }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f3f4f6' },
+                            ticks: { display: false } // Abstract time
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: fontConfig }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderPartitionChart() {
+            const ctx = document.getElementById('partitionChart');
+            if (!ctx) return;
+            if (partitionChartInstance) partitionChartInstance.destroy();
+
+            partitionChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Data Moved Across Network (Shuffle)', 'Data Processed Locally'],
+                    datasets: [{
+                        data: [95, 5], // repartition
+                        backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(229, 231, 235, 1)'],
+                        borderWidth: 0,
+                        label: 'repartition(10)'
+                    },
+                    {
+                        data: [0, 100], // coalesce
+                        backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(34, 197, 94, 0.8)'],
+                        borderWidth: 0,
+                        label: 'coalesce(10)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '50%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: fontConfig, usePointStyle: true, boxWidth: 8 } },
+                        tooltip: {
+                            callbacks: {
+                                title: (ctx) => ctx[0].dataset.label,
+                                label: (ctx) => ` ${ctx.label}: ${ctx.parsed}%`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Init initial charts
+        document.addEventListener('DOMContentLoaded', () => {
+            renderUdfChart();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PySpark DataFrame Operation Flow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px;
+            background-color: #f9f9f9;
+            box-sizing: border-box;
+        }
+        .main-wrapper {
+            display: flex;
+            flex-direction: row;
+            gap: 40px;
+            max-width: 1200px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .code-container {
+            flex: 1;
+            min-width: 400px;
+            max-width: 500px;
+            background-color: #2b2b2b;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            color: #f8f8f2;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            align-self: flex-start;
+            position: sticky;
+            top: 40px;
+        }
+        .code-container h3 {
+            color: #ffffff;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+        }
+        .kw { color: #cc7832; font-weight: bold; }
+        .func { color: #ffc66d; }
+        .str { color: #6a8759; }
+        .cmt { color: #808080; font-style: italic; }
+        .obj { color: #a9b7c6; }
+
+        .diagram-container {
+            flex: 1;
+            min-width: 500px;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+        }
+        
+        /* SVG Element Styles */
+        .box-main {
+            fill: #ffffff;
+            stroke: #333333;
+            stroke-width: 1.2;
+            filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.15));
+        }
+        .box-inner-peach {
+            fill: #F6DCCD;
+            stroke: #333333;
+            stroke-width: 1.2;
+        }
+        .box-output {
+            fill: #E8F4E6;
+            stroke: #333333;
+            stroke-width: 1.2;
+            filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.15));
+        }
+        .connector-line {
+            fill: none;
+            stroke: #222222;
+            stroke-width: 1.5;
+        }
+        
+        /* Text Styles */
+        .text-standard {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            fill: #222222;
+            font-weight: bold;
+        }
+        .text-code {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+            fill: #0055a4;
+        }
+        .tag-box {
+            fill: #555555;
+            filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.15));
+        }
+        .tag-text {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            fill: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <!-- Code Snippet Container -->
+    <div class="code-container">
+        <h3>PySpark Code Snippet</h3>
+        <pre style="margin: 0; overflow-x: auto;">
+<span class="cmt"># 1. Initialize DataFrames</span>
+<span class="obj">people</span> = <span class="obj">spark</span>.<span class="func">createDataFrame</span>([...])
+<span class="obj">department</span> = <span class="obj">spark</span>.<span class="func">createDataFrame</span>([...])
+
+<span class="cmt"># 2. DataFrame Operation Pipeline</span>
+<span class="obj">people</span>.<span class="func">filter</span>(<span class="obj">people</span>.age > <span class="kw">30</span>) \
+      .<span class="func">join</span>(<span class="obj">department</span>, 
+            <span class="obj">people</span>.deptId == <span class="obj">department</span>.id) \
+      .<span class="func">groupBy</span>(<span class="obj">department</span>.name, <span class="str">"gender"</span>) \
+      .<span class="func">agg</span>({<span class="str">"salary"</span>: <span class="str">"avg"</span>, <span class="str">"age"</span>: <span class="str">"max"</span>}) \
+      .<span class="func">sort</span>(<span class="str">"max(age)"</span>) \
+      .<span class="func">show</span>()
+        </pre>
+    </div>
+
+    <!-- Diagram Container -->
+    <div class="diagram-container">
+        <svg width="460" height="800" viewBox="0 0 460 800" xmlns="http://www.w3.org/2000/svg">
+            <!-- Definitions for Arrowheads -->
+            <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#222222" />
+                </marker>
+            </defs>
+
+            <!-- ================= TOP LEFT LABEL ================= -->
+            <rect class="tag-box" x="10" y="10" width="160" height="28" />
+            <text class="tag-text" x="18" y="29">Operation Flow</text>
+
+            <!-- ================= LINES & ARROWS ================= -->
+            
+            <!-- People to Filter -->
+            <line class="connector-line" marker-end="url(#arrow)" x1="160" y1="110" x2="160" y2="145" />
+            
+            <!-- Filter to Join -->
+            <path class="connector-line" marker-end="url(#arrow)" d="M 160 210 C 160 240, 260 230, 260 255" />
+            
+            <!-- Department to Join -->
+            <path class="connector-line" marker-end="url(#arrow)" d="M 370 210 C 370 240, 270 230, 270 255" />
+            
+            <!-- Join to GroupBy -->
+            <line class="connector-line" marker-end="url(#arrow)" x1="230" y1="320" x2="230" y2="365" />
+
+            <!-- GroupBy to Agg -->
+            <line class="connector-line" marker-end="url(#arrow)" x1="230" y1="430" x2="230" y2="475" />
+
+            <!-- Agg to Sort -->
+            <line class="connector-line" marker-end="url(#arrow)" x1="230" y1="540" x2="230" y2="585" />
+
+            <!-- Sort to Show (Action) -->
+            <line class="connector-line" marker-end="url(#arrow)" x1="230" y1="650" x2="230" y2="695" />
+
+
+            <!-- ================= INPUT DATAFRAMES ================= -->
+            
+            <!-- People DataFrame -->
+            <rect class="box-main" x="80" y="50" width="160" height="60" />
+            <text class="text-standard" x="160" y="75" text-anchor="middle">DataFrame</text>
+            <text class="text-code" x="160" y="95" text-anchor="middle">(people)</text>
+
+            <!-- Department DataFrame -->
+            <rect class="box-main" x="290" y="150" width="160" height="60" />
+            <text class="text-standard" x="370" y="175" text-anchor="middle">DataFrame</text>
+            <text class="text-code" x="370" y="195" text-anchor="middle">(department)</text>
+
+
+            <!-- ================= TRANSFORMATIONS ================= -->
+            
+            <!-- Filter -->
+            <rect class="box-inner-peach" x="80" y="150" width="160" height="60" />
+            <text class="text-standard" x="160" y="175" text-anchor="middle">filter()</text>
+            <text class="text-code" x="160" y="195" text-anchor="middle">age > 30</text>
+
+            <!-- Join -->
+            <rect class="box-inner-peach" x="150" y="260" width="160" height="60" />
+            <text class="text-standard" x="230" y="285" text-anchor="middle">join()</text>
+            <text class="text-code" x="230" y="305" text-anchor="middle">deptId == id</text>
+
+            <!-- GroupBy -->
+            <rect class="box-inner-peach" x="150" y="370" width="160" height="60" />
+            <text class="text-standard" x="230" y="395" text-anchor="middle">groupBy()</text>
+            <text class="text-code" x="230" y="415" text-anchor="middle">name, gender</text>
+
+            <!-- Agg -->
+            <rect class="box-inner-peach" x="150" y="480" width="160" height="60" />
+            <text class="text-standard" x="230" y="505" text-anchor="middle">agg()</text>
+            <text class="text-code" x="230" y="525" text-anchor="middle">avg(sal), max(age)</text>
+
+            <!-- Sort -->
+            <rect class="box-inner-peach" x="150" y="590" width="160" height="60" />
+            <text class="text-standard" x="230" y="615" text-anchor="middle">sort()</text>
+            <text class="text-code" x="230" y="635" text-anchor="middle">max(age)</text>
+
+
+            <!-- ================= ACTION (OUTPUT) ================= -->
+            
+            <!-- Show -->
+            <rect class="box-output" x="150" y="700" width="160" height="60" />
+            <text class="text-standard" x="230" y="725" text-anchor="middle">show()</text>
+            <text class="text-code" x="230" y="745" text-anchor="middle">(Action)</text>
+
+        </svg>
+    </div>
+</div>
+
+</body>
+</html>

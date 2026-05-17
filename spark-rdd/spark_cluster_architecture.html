@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark Cluster Architecture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f9f9f9;
+        }
+        .diagram-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: auto;
+        }
+        
+        /* SVG Element Styles */
+        .box-main {
+            fill: #ffffff;
+            stroke: #333333;
+            stroke-width: 1.2;
+            filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.15));
+        }
+        .box-inner-peach {
+            fill: #F6DCCD; /* Matches the peach cache/task/sparkcontext color */
+            stroke: #333333;
+            stroke-width: 1.2;
+        }
+        .box-executor {
+            fill: #FAEBDF; /* Lighter peach for executor background */
+            stroke: #333333;
+            stroke-width: 1.2;
+        }
+        .connector-line {
+            fill: none;
+            stroke: #222222;
+            stroke-width: 1.5;
+        }
+        
+        /* Text Styles */
+        .text-standard {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            fill: #222222;
+        }
+        .text-small {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            fill: #222222;
+        }
+        .tag-box {
+            fill: #555555;
+            filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.15));
+        }
+        .tag-text {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            fill: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="diagram-container">
+    <svg width="800" height="460" viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg">
+        
+        <!-- Definitions for Arrowheads -->
+        <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#222222" />
+            </marker>
+        </defs>
+
+        <!-- ================= LINES & ARROWS ================= -->
+        <!-- Driver to Worker 1 (Top Curve) -->
+        <path class="connector-line" marker-start="url(#arrow)" marker-end="url(#arrow)" 
+              d="M 115 190 Q 300 20 575 110" />
+              
+        <!-- Driver to Worker 2 (Bottom Curve) -->
+        <path class="connector-line" marker-start="url(#arrow)" marker-end="url(#arrow)" 
+              d="M 115 250 Q 300 420 575 330" />
+
+        <!-- SparkContext to Cluster Manager -->
+        <line class="connector-line" marker-start="url(#arrow)" marker-end="url(#arrow)" 
+              x1="175" y1="220" x2="315" y2="220" />
+
+        <!-- Cluster Manager to Worker 1 -->
+        <line class="connector-line" marker-start="url(#arrow)" marker-end="url(#arrow)" 
+              x1="475" y1="200" x2="575" y2="150" />
+
+        <!-- Cluster Manager to Worker 2 -->
+        <line class="connector-line" marker-start="url(#arrow)" marker-end="url(#arrow)" 
+              x1="475" y1="240" x2="575" y2="290" />
+
+        <!-- Worker 1 to Worker 2 (Vertical Right) -->
+        <line class="connector-line" marker-start="url(#arrow)" marker-end="url(#arrow)" 
+              x1="710" y1="190" x2="710" y2="240" />
+
+        <!-- ================= TOP LEFT LABEL ================= -->
+        <rect class="tag-box" x="10" y="10" width="185" height="28" />
+        <text class="tag-text" x="18" y="29">Spark cluster components</text>
+
+        <!-- ================= DRIVER PROGRAM ================= -->
+        <rect class="box-main" x="40" y="130" width="150" height="130" />
+        <text class="text-standard" x="115" y="152" text-anchor="middle">Driver Program</text>
+        
+        <rect class="box-inner-peach" x="55" y="190" width="120" height="60" />
+        <text class="text-standard" x="115" y="225" text-anchor="middle">SparkContext</text>
+
+        <!-- ================= CLUSTER MANAGER ================= -->
+        <rect class="box-main" x="320" y="185" width="150" height="70" />
+        <text class="text-standard" x="395" y="225" text-anchor="middle">Cluster Manager</text>
+
+        <!-- ================= WORKER NODE 1 (TOP) ================= -->
+        <rect class="box-main" x="580" y="30" width="180" height="150" />
+        <text class="text-standard" x="590" y="52">Worker Node</text>
+
+        <!-- Executor 1 -->
+        <rect class="box-executor" x="592" y="65" width="156" height="105" />
+        <text class="text-standard" x="598" y="83">Executor</text>
+
+        <!-- Cache 1 -->
+        <rect class="box-inner-peach" x="682" y="70" width="60" height="32" />
+        <text class="text-standard" x="712" y="91" text-anchor="middle">Cache</text>
+
+        <!-- Tasks 1 -->
+        <rect class="box-inner-peach" x="600" y="115" width="60" height="40" />
+        <text class="text-standard" x="630" y="140" text-anchor="middle">Task</text>
+
+        <rect class="box-inner-peach" x="675" y="115" width="60" height="40" />
+        <text class="text-standard" x="705" y="140" text-anchor="middle">Task</text>
+
+        <!-- ================= WORKER NODE 2 (BOTTOM) ================= -->
+        <rect class="box-main" x="580" y="250" width="180" height="150" />
+        <text class="text-standard" x="590" y="272">Worker Node</text>
+
+        <!-- Executor 2 -->
+        <rect class="box-executor" x="592" y="285" width="156" height="105" />
+        <text class="text-standard" x="598" y="303">Executor</text>
+
+        <!-- Cache 2 -->
+        <rect class="box-inner-peach" x="682" y="290" width="60" height="32" />
+        <text class="text-standard" x="712" y="311" text-anchor="middle">Cache</text>
+
+        <!-- Tasks 2 -->
+        <rect class="box-inner-peach" x="600" y="335" width="60" height="40" />
+        <text class="text-standard" x="630" y="360" text-anchor="middle">Task</text>
+
+        <rect class="box-inner-peach" x="675" y="335" width="60" height="40" />
+        <text class="text-standard" x="705" y="360" text-anchor="middle">Task</text>
+
+    </svg>
+</div>
+
+</body>
+</html>

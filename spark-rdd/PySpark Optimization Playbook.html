@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PySpark & Databricks Optimization Playbook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        .nav-active {
+            border-bottom: 2px solid #0f766e;
+            color: #0f766e;
+            font-weight: 600;
+        }
+
+        .cluster-node {
+            transition: transform 0.3s ease;
+        }
+
+        .cluster-node:hover {
+            transform: translateY(-5px);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-stone-50 text-stone-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Chosen Palette: Warm Neutrals with Teal Accents (Stone-50 background, Stone-800 text, Teal-700/600 for highlights and CTAs). Promotes a calm, focused reading environment. -->
+    <!-- Application Structure Plan: A tabbed "Playbook" dashboard. It synthesizes architectural theory, API selection, and physical optimizations into sequential, digestible views. 1. Architecture (Foundations), 2. APIs (DataFrames vs RDD), 3. Execution & Optimizations (Tungsten, Shuffles, Caching), 4. Spark UI (Monitoring). This flow moves the user from conceptual understanding to practical coding choices, and finally to performance validation, mirroring an expert's workflow. -->
+    <!-- Visualization & Content Choices: 
+  1. Architecture: Goal -> Inform about cluster topology. Viz -> HTML/CSS interactive grid mapping Driver/Executors. Library -> Vanilla DOM. Justification -> Avoids SVG while providing an interactive mental model.
+  2. API Performance: Goal -> Compare RDD/DF execution. Viz -> Chart.js Bar Chart. Library -> Chart.js. Justification -> Clearly quantifies the Catalyst optimizer's benefit.
+  3. Shuffle Overhead: Goal -> Highlight network bottlenecks. Viz -> Chart.js Doughnut Chart. Library -> Chart.js. Justification -> Shows proportions of time spent on CPU vs Network I/O.
+  4. Code Snippets: Goal -> Teach best practices. Viz -> Interactive HTML toggles. Library -> Vanilla JS. Justification -> Allows direct comparison of "bad" vs "good" PySpark code. 
+-->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-stone-900 flex items-center gap-3">
+                <span class="text-teal-700">⚡</span> PySpark Optimization Playbook
+            </h1>
+            <p class="text-stone-500 mt-2 text-sm md:text-base">An interactive guide to mastering Apache Spark
+                architecture and high-performance data computation on Databricks.</p>
+        </div>
+        <nav class="max-w-6xl mx-auto px-4 flex overflow-x-auto border-t border-stone-200">
+            <button onclick="switchTab('arch')" id="tab-arch"
+                class="nav-active px-4 py-3 text-sm md:text-base text-stone-600 hover:text-teal-700 whitespace-nowrap transition-colors">1.
+                Spark Architecture</button>
+            <button onclick="switchTab('apis')" id="tab-apis"
+                class="px-4 py-3 text-sm md:text-base text-stone-600 hover:text-teal-700 whitespace-nowrap transition-colors">2.
+                DataFrame vs RDD</button>
+            <button onclick="switchTab('opt')" id="tab-opt"
+                class="px-4 py-3 text-sm md:text-base text-stone-600 hover:text-teal-700 whitespace-nowrap transition-colors">3.
+                Core Optimizations</button>
+            <button onclick="switchTab('ui')" id="tab-ui"
+                class="px-4 py-3 text-sm md:text-base text-stone-600 hover:text-teal-700 whitespace-nowrap transition-colors">4.
+                Spark UI & Monitoring</button>
+        </nav>
+    </header>
+
+    <main class="flex-grow w-full max-w-6xl mx-auto px-4 py-8">
+
+        <section id="section-arch" class="fade-in block">
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold text-teal-800 mb-3">Understanding the Engine</h2>
+                <p class="text-stone-600 leading-relaxed">
+                    To write optimized PySpark code on Databricks, you must first understand how Apache Spark
+                    distributes workloads. Spark is a unified computing engine for parallel data processing on a
+                    cluster. It does not store data; instead, it processes data in-memory across multiple machines.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="col-span-1 bg-white p-6 rounded-xl border border-stone-200 shadow-sm cluster-node">
+                    <div class="text-4xl mb-3">🧠</div>
+                    <h3 class="text-xl font-bold text-stone-800 mb-2">Driver Node</h3>
+                    <p class="text-stone-600 text-sm">The brain of Spark. It creates the <code>SparkSession</code>,
+                        translates your PySpark code into a physical execution plan, and coordinates tasks. It delegates
+                        heavy lifting to the executors.</p>
+                </div>
+                <div class="col-span-1 md:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2"><span>🖥️</span> Worker
+                        Nodes (Executors)</h3>
+                    <p class="text-stone-600 text-sm mb-4">Executors are spawned on worker nodes. They run the actual
+                        tasks assigned by the Driver and store data in memory or on disk for caching.</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-teal-50 border border-teal-100 p-3 rounded text-center cluster-node cursor-pointer"
+                            onclick="showNodeDetail('Executor 1 running 4 parallel tasks computing partitioned data in-memory.')">
+                            <span class="font-semibold text-teal-800 text-sm">Executor 1</span>
+                            <div class="text-xs text-teal-600 mt-1">Tasks: [ | | | ]</div>
+                        </div>
+                        <div class="bg-teal-50 border border-teal-100 p-3 rounded text-center cluster-node cursor-pointer"
+                            onclick="showNodeDetail('Executor 2 running 4 parallel tasks. Data is localized to minimize network usage.')">
+                            <span class="font-semibold text-teal-800 text-sm">Executor 2</span>
+                            <div class="text-xs text-teal-600 mt-1">Tasks: [ | | | ]</div>
+                        </div>
+                    </div>
+                    <div id="node-detail" class="mt-4 text-sm text-stone-500 italic h-6">Click an executor to see
+                        details.</div>
+                </div>
+            </div>
+
+            <div class="bg-stone-800 text-stone-100 p-6 rounded-xl">
+                <h3 class="text-lg font-semibold text-teal-400 mb-2">Key Takeaway</h3>
+                <p class="text-sm leading-relaxed">
+                    Always remember that operations like `.collect()` pull all distributed data from the Executors back
+                    to the single Driver memory. If the dataset is large, this will crash the Driver (Out of Memory
+                    error). Process data using distributed DataFrame operations and only collect aggregated, small
+                    results.
+                </p>
+            </div>
+        </section>
+
+        <section id="section-apis" class="fade-in hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold text-teal-800 mb-3">The API Choice: DataFrames & Spark SQL</h2>
+                <p class="text-stone-600 leading-relaxed">
+                    While Resilient Distributed Datasets (RDDs) are the foundational building blocks, modern Databricks
+                    development heavily favors Spark SQL and DataFrames. Why? Because the Catalyst Optimizer cannot
+                    inspect Python RDD functions, but it deeply understands DataFrame transformations, allowing it to
+                    rewrite and optimize your queries automatically.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm w-full">
+                    <h3 class="text-lg font-bold text-stone-800 mb-4 text-center">Relative Execution Time (Lower is
+                        Better)</h3>
+                    <div class="chart-container">
+                        <canvas id="apiPerformanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-5 border-l-4 border-teal-600 rounded shadow-sm">
+                        <h4 class="font-bold text-stone-800 mb-2">Project Tungsten</h4>
+                        <p class="text-sm text-stone-600">
+                            When using DataFrames, Spark leverages Project Tungsten. It bypasses standard object models,
+                            generates optimized bytecode on the fly (Whole-Stage Code Generation), and manages memory
+                            directly to utilize CPU registers effectively.
+                        </p>
+                    </div>
+                    <div class="bg-white p-5 border-l-4 border-stone-300 rounded shadow-sm">
+                        <h4 class="font-bold text-stone-800 mb-2">Python Overhead in RDDs</h4>
+                        <p class="text-sm text-stone-600">
+                            Using RDDs with PySpark requires serialization between the JVM (where Spark runs) and the
+                            Python interpreter for every row. DataFrames bridge this gap efficiently using optimized
+                            vectorization.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-opt" class="fade-in hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold text-teal-800 mb-3">Tactical Performance Optimizations</h2>
+                <p class="text-stone-600 leading-relaxed">
+                    Beyond using DataFrames, understanding how Spark moves data across the network (Shuffles) and how it
+                    persists intermediate data in memory (Caching) are the most critical skills for a Databricks Data
+                    Engineer.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4 border-b pb-2">1. Minimizing Shuffles</h3>
+                    <p class="text-sm text-stone-600 mb-4">A "Shuffle" occurs when data needs to be redistributed across
+                        partitions (and network nodes), typically during <code>join()</code>, <code>groupBy()</code>, or
+                        <code>orderBy()</code> operations. It is the most expensive operation in Spark.</p>
+
+                    <div class="chart-container !h-[250px] mb-4">
+                        <canvas id="shuffleOverheadChart"></canvas>
+                    </div>
+
+                    <div class="bg-red-50 p-3 rounded text-sm mb-2 border border-red-100">
+                        <strong>Avoid:</strong> Using <code>groupByKey()</code> which forces all values for a key onto a
+                        single executor before reducing.
+                    </div>
+                    <div class="bg-teal-50 p-3 rounded text-sm border border-teal-100">
+                        <strong>Prefer:</strong> <code>reduceByKey()</code> or DataFrame <code>groupBy().agg()</code>
+                        which combines data locally on each executor before the network shuffle.
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4 border-b pb-2">2. Intelligent Caching</h3>
+                    <p class="text-sm text-stone-600 mb-4">If an expensive DataFrame is reused multiple times in an
+                        application, cache it. Otherwise, Spark will re-evaluate the entire lineage from the source for
+                        every action.</p>
+
+                    <div class="space-y-4">
+                        <div class="flex flex-col">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-semibold text-sm">Code Evaluation:</span>
+                                <button onclick="toggleCodeView('cache')"
+                                    class="text-xs bg-stone-200 hover:bg-stone-300 px-2 py-1 rounded transition-colors">Toggle
+                                    Scenario</button>
+                            </div>
+                            <div id="code-bad-cache"
+                                class="bg-stone-900 text-green-400 p-4 rounded font-mono text-xs overflow-x-auto whitespace-pre">
+                                # BAD: Recomputing expensive transformations
+                                df = spark.read.parquet("huge_data")
+                                expensive_df = df.filter(...).join(...)
+
+                                # Action 1 triggers calculation
+                                count1 = expensive_df.filter(col("A") > 10).count()
+
+                                # Action 2 triggers ENTIRE calculation AGAIN
+                                count2 = expensive_df.filter(col("B") < 5).count() </div>
+                                    <div id="code-good-cache"
+                                        class="bg-stone-900 text-teal-400 p-4 rounded font-mono text-xs overflow-x-auto whitespace-pre hidden">
+                                        # GOOD: Caching reused dataframes
+                                        df = spark.read.parquet("huge_data")
+                                        expensive_df = df.filter(...).join(...)
+
+                                        # Persist to Memory and Disk
+                                        expensive_df.cache()
+
+                                        # Action 1 triggers calculation & caches result
+                                        count1 = expensive_df.filter(col("A") > 10).count()
+
+                                        # Action 2 reads from cache! Lightning fast.
+                                        count2 = expensive_df.filter(col("B") < 5).count() </div>
+                                    </div>
+                                    <p class="text-xs text-stone-500 mt-2">
+                                        *Note: Use <code>df.unpersist()</code> when the cached data is no longer needed
+                                        to free cluster memory. You can check if a DataFrame is cached using the
+                                        <code>is_cached</code> attribute.
+                                    </p>
+                            </div>
+                        </div>
+                    </div>
+        </section>
+
+        <section id="section-ui" class="fade-in hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-semibold text-teal-800 mb-3">Spark UI: The Source of Truth</h2>
+                <p class="text-stone-600 leading-relaxed">
+                    Whenever you write a query, open the Spark UI and examine what is happening under the hood. The UI
+                    reveals the physical plan Databricks generated, showing exactly where time is being spent.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm">
+                <div class="p-6 bg-stone-50 border-b border-stone-200">
+                    <h3 class="font-bold text-stone-800">What to look for in the SQL / DataFrame Tab:</h3>
+                </div>
+                <div class="p-0">
+                    <ul class="divide-y divide-stone-100">
+                        <li class="p-4 hover:bg-stone-50 transition-colors flex items-start gap-3">
+                            <span class="text-teal-600 mt-1">⮑</span>
+                            <div>
+                                <h4 class="font-bold text-stone-700 text-sm">Whole-stage CodeGen vs Hash Aggregate</h4>
+                                <p class="text-xs text-stone-500 mt-1">If Tungsten is working correctly, you will see
+                                    `WholeStageCodegen` boxes wrapping your operations in the DAG. If optimization fails
+                                    or is turned off, you will fall back to generic, slower `HashAggregate` nodes.</p>
+                            </div>
+                        </li>
+                        <li class="p-4 hover:bg-stone-50 transition-colors flex items-start gap-3">
+                            <span class="text-teal-600 mt-1">⮑</span>
+                            <div>
+                                <h4 class="font-bold text-stone-700 text-sm">Exchange Nodes (Shuffles)</h4>
+                                <p class="text-xs text-stone-500 mt-1">Look for `Exchange` operations. Hover over them
+                                    to see the amount of data spilled to disk or sent across the network. High data
+                                    volume here indicates an opportunity for optimization (e.g., Broadcast Hash Joins
+                                    for small tables).</p>
+                            </div>
+                        </li>
+                        <li class="p-4 hover:bg-stone-50 transition-colors flex items-start gap-3">
+                            <span class="text-teal-600 mt-1">⮑</span>
+                            <div>
+                                <h4 class="font-bold text-stone-700 text-sm">Skewed Data in Tasks Tab</h4>
+                                <p class="text-xs text-stone-500 mt-1">In the Stages tab, look at the task duration
+                                    summary. If the Max time is massively larger than the 75th percentile time, you have
+                                    data skew (one executor is doing all the work). Salting or skew hints in Databricks
+                                    are needed.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-stone-900 text-stone-400 py-6 text-center text-sm mt-auto">
+        <p>Built for Data Professionals • Optimized for Databricks Lakehouse</p>
+    </footer>
+
+    <script>
+        // --- Navigation Logic ---
+        const sections = ['arch', 'apis', 'opt', 'ui'];
+
+        function switchTab(tabId) {
+            // Update Nav Styles
+            sections.forEach(id => {
+                const btn = document.getElementById(`tab-${id}`);
+                const section = document.getElementById(`section-${id}`);
+
+                if (id === tabId) {
+                    btn.classList.add('nav-active');
+                    btn.classList.remove('text-stone-600');
+                    section.classList.remove('hidden');
+                    // Re-render charts if their container becomes visible
+                    if (tabId === 'apis') setTimeout(renderApiChart, 50);
+                    if (tabId === 'opt') setTimeout(renderShuffleChart, 50);
+                } else {
+                    btn.classList.remove('nav-active');
+                    btn.classList.add('text-stone-600');
+                    section.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Interactive Elements Logic ---
+        function showNodeDetail(text) {
+            const detailEl = document.getElementById('node-detail');
+            detailEl.textContent = text;
+            detailEl.classList.remove('text-stone-500', 'italic');
+            detailEl.classList.add('text-teal-700', 'font-medium');
+            setTimeout(() => {
+                detailEl.classList.remove('text-teal-700', 'font-medium');
+                detailEl.classList.add('text-stone-500', 'italic');
+            }, 3000);
+        }
+
+        let cacheViewGood = false;
+        function toggleCodeView(type) {
+            if (type === 'cache') {
+                cacheViewGood = !cacheViewGood;
+                if (cacheViewGood) {
+                    document.getElementById('code-bad-cache').classList.add('hidden');
+                    document.getElementById('code-good-cache').classList.remove('hidden');
+                } else {
+                    document.getElementById('code-bad-cache').classList.remove('hidden');
+                    document.getElementById('code-good-cache').classList.add('hidden');
+                }
+            }
+        }
+
+        // --- Chart.js Implementations ---
+        let apiChartInstance = null;
+        let shuffleChartInstance = null;
+
+        // Shared styling variables for charts
+        const fontConfig = { family: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial" };
+
+        function renderApiChart() {
+            const ctx = document.getElementById('apiPerformanceChart');
+            if (!ctx) return;
+
+            if (apiChartInstance) {
+                apiChartInstance.destroy(); // Prevent memory leaks on re-renders
+            }
+
+            apiChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Python RDDs', 'DataFrames (Standard)', 'DataFrames (Tungsten)'],
+                    datasets: [{
+                        label: 'Simulated Execution Time',
+                        data: [100, 35, 10], // Representative relative data based on concept
+                        backgroundColor: [
+                            'rgba(120, 113, 108, 0.6)', // stone-500
+                            'rgba(20, 184, 166, 0.6)', // teal-500
+                            'rgba(15, 118, 110, 0.9)'  // teal-700
+                        ],
+                        borderColor: [
+                            'rgb(120, 113, 108)',
+                            'rgb(20, 184, 166)',
+                            'rgb(15, 118, 110)'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `Relative Time: ${context.parsed.y} units`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            ticks: { display: false } // Hide exact numbers to focus on relative size
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: fontConfig,
+                                color: '#444',
+                                callback: function (value) {
+                                    // 16-char wrapping logic applied to labels
+                                    let label = this.getLabelForValue(value);
+                                    if (label.length > 16) {
+                                        let splitPos = label.indexOf(' ', 10);
+                                        if (splitPos === -1) splitPos = 16;
+                                        return [label.substring(0, splitPos), label.substring(splitPos).trim()];
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderShuffleChart() {
+            const ctx = document.getElementById('shuffleOverheadChart');
+            if (!ctx) return;
+
+            if (shuffleChartInstance) {
+                shuffleChartInstance.destroy();
+            }
+
+            shuffleChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Network I/O (Shuffle)', 'Disk I/O', 'Actual CPU Computation'],
+                    datasets: [{
+                        data: [65, 20, 15],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',  // red-500 for bottleneck
+                            'rgba(245, 158, 11, 0.8)', // amber-500
+                            'rgba(15, 118, 110, 0.8)'  // teal-700 for actual work
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: fontConfig,
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Unoptimized Job Time Breakdown',
+                            font: fontConfig,
+                            padding: { bottom: 10 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // No chart to render on first tab load implicitly, but defined structure allows it.
+        });
+
+    </script>
+</body>
+
+</html>
